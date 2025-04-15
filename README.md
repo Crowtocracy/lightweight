@@ -1,0 +1,1 @@
+Very simple app that somehow I couldn't find already existing in the App Store. Free and open source in case anyone can learn from this. This app may be useful as a demonstration of how to use SwiftData.
