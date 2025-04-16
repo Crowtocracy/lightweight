@@ -115,26 +115,29 @@ struct ExerciseListView: View {
   }
 
   private func findBestResult(for exercise: Exercise) -> ExerciseResult? {
-    let results = exercise.results
+    if let results = exercise.results {
     guard !results.isEmpty else { return nil }
 
-    switch exercise.scoreType {
-    case .weight:
-      return results.max { a, b in
-        (a.weight ?? 0) < (b.weight ?? 0)
+      switch exercise.scoreType {
+      case .weight:
+        return results.max { a, b in
+          (a.weight ?? 0) < (b.weight ?? 0)
+        }
+      case .reps:
+        return results.max { a, b in
+          (a.reps ?? 0) < (b.reps ?? 0)
+        }
+      case .time:
+        return results.min { a, b in
+          (a.time ?? 0) < (b.time ?? 0)
+        }
+      case .other:
+        return results.max { a, b in
+          (a.otherUnit ?? 0) < (b.otherUnit ?? 0)
+        }
       }
-    case .reps:
-      return results.max { a, b in
-        (a.reps ?? 0) < (b.reps ?? 0)
-      }
-    case .time:
-      return results.min { a, b in
-        (a.time ?? 0) < (b.time ?? 0)
-      }
-    case .other:
-      return results.max { a, b in
-        (a.otherUnit ?? 0) < (b.otherUnit ?? 0)
-      }
+    } else {
+      return exercise.results?.first
     }
   }
 

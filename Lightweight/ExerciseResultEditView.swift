@@ -148,9 +148,9 @@ struct ExerciseResultEditView: View {
   }
 }
 
-#Preview {
-  NavigationStack {
-    ExerciseResultEditView(result: LightweightApp.DataController.previewContainer.mainContext.exerciseWithSampleResults().results.first!, isNew: false)
-  }
-  .modelContainer(LightweightApp.DataController.previewContainer)
-}
+//#Preview {
+//  NavigationStack {
+//    ExerciseResultEditView(result: LightweightApp.DataController.previewContainer.mainContext.exerciseWithSampleResults().results?.first!, isNew: false)
+//  }
+//  .modelContainer(LightweightApp.DataController.previewContainer)
+//}

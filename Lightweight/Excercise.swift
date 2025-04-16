@@ -10,12 +10,12 @@ import SwiftData
 
 @Model
 final class Exercise {
-  var uuid: UUID
-  var name: String
+  var uuid: UUID = UUID()
+  var name: String = ""
   var detail: String?
-  var scoreType: ScoreType
+  var scoreType: ScoreType = ScoreType.weight
   var otherUnits: String?
-  @Relationship(deleteRule: .cascade) var results: [ExerciseResult] = []
+  @Relationship(deleteRule: .cascade) var results: [ExerciseResult]? = []
 
   init(name: String, detail: String? = nil, scoreType: ScoreType = .weight, otherUnits: String? = nil) {
     self.uuid = UUID()
@@ -23,18 +23,19 @@ final class Exercise {
     self.detail = detail
     self.scoreType = scoreType
     self.otherUnits = otherUnits
+    self.results = []
   }
 }
 
 @Model
 final class ExerciseResult {
-  var id: UUID
-  var date: Date
+  var id: UUID = UUID()
+  var date: Date = Date()
   var notes: String?
   var weight: Int?
   var reps: Int?
-  var time: TimeInterval?  // Stores time in seconds with fractional milliseconds
-  var otherUnit: Double?   // Supports up to 3 decimal places
+  var time: TimeInterval?
+  var otherUnit: Double?
 
   @Relationship(inverse: \Exercise.results) var exercise: Exercise?
 

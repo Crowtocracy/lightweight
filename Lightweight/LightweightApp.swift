@@ -12,7 +12,7 @@ import SwiftData
 struct LightweightApp: App {
   var sharedModelContainer: ModelContainer = {
     let schema = Schema([
-      Exercise.self,
+      Exercise.self,ExerciseResult.self
     ])
     let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
