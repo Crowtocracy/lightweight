@@ -11,7 +11,7 @@ struct ExerciseResultsView: View {
   @State private var exerciseDetail: String = ""
   @State private var showingNewResult = false
   @State private var newResult: ExerciseResult?
-
+  
   init(exercise: Exercise) {
     self.exercise = exercise
     let exerciseUUID = exercise.uuid
@@ -27,7 +27,7 @@ struct ExerciseResultsView: View {
       ]
     )
   }
-
+  
   var body: some View {
     List {
       ForEach(results) { result in
@@ -81,9 +81,7 @@ struct ExerciseResultsView: View {
       }
     }
     .sheet(isPresented: $showingNewResult, onDismiss: {
-      if newResult?.modelContext == nil {
-        newResult = nil
-      }
+      newResult = nil
     }) {
       if let result = newResult {
         NavigationStack {
@@ -92,7 +90,7 @@ struct ExerciseResultsView: View {
       }
     }
   }
-
+  
   @ViewBuilder
   private func resultDisplay(for result: ExerciseResult) -> some View {
     switch exercise.scoreType {
@@ -123,13 +121,13 @@ struct ExerciseResultsView: View {
       }
     }
   }
-
+  
   private func formatTime(_ timeInterval: TimeInterval) -> String {
     let hours = Int(timeInterval) / 3600
     let minutes = Int(timeInterval) / 60 % 60
     let seconds = Int(timeInterval) % 60
     let milliseconds = Int((timeInterval.truncatingRemainder(dividingBy: 1)) * 1000)
-
+    
     if hours > 0 {
       return String(format: "%d:%02d:%02d", hours, minutes, seconds)
     } else if minutes > 0 {
@@ -138,7 +136,7 @@ struct ExerciseResultsView: View {
       return String(format: "%d.%03d", seconds, milliseconds)
     }
   }
-
+  
   private func addNewResult() {
     showingNewResult = true
   }
@@ -154,25 +152,25 @@ struct ExerciseResultsView: View {
 extension ModelContext {
   func exerciseWithSampleResults() -> Exercise {
     let exercise = Exercise(name: "Back Squat", scoreType: .weight)
-
+    
     let result1 = ExerciseResult(
       exercise: exercise,
       date: .now,
       weight: 225,
       reps: 5
     )
-
+    
     let result2 = ExerciseResult(
       exercise: exercise,
       date: .now.addingTimeInterval(-86400),
       weight: 215,
       reps: 1
     )
-
+    
     self.insert(exercise)
     self.insert(result1)
     self.insert(result2)
-
+    
     return exercise
   }
 }

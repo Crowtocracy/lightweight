@@ -8,142 +8,287 @@ struct ExerciseResultEditView: View {
   let result: ExerciseResult
   let isNew: Bool
 
-  // For time input
-  @State private var hours = 0
-  @State private var minutes = 0
-  @State private var seconds = 0
-  @State private var milliseconds = 0
-
-  // Local state to prevent constant updates
-  @State private var localDate: Date 
+  // Local state for editing
+  @State private var localDate: Date
   @State private var localWeight: Int?
-  @State private var localReps: Int = 0
-  @State private var localNotes: String = ""
+  @State private var localReps: Int?
+  @State private var localNotes: String
   @State private var localOtherUnit: Double?
+
+  // Local state for time input (using Strings for easier TextField binding)
+  @State private var timeHours: String
+  @State private var timeMinutes: String
+  @State private var timeSeconds: String
+
+  let commonReps = [1, 3, 5, 8, 10, 12]
 
   init(result: ExerciseResult, isNew: Bool) {
     self.result = result
     self.isNew = isNew
-    _localDate = State(initialValue: result.date)
+
+    // --- Initialize State ---
+    // Use Date() for new results, otherwise the existing date
+    _localDate = State(initialValue: isNew ? Date() : result.date)
     _localWeight = State(initialValue: result.weight)
-    _localReps = State(initialValue: result.reps ?? 0)
+
+    // Initialize reps to 1 for new weight-based exercises
+    if isNew && result.exercise?.scoreType == .weight {
+      _localReps = State(initialValue: 1)
+    } else {
+      _localReps = State(initialValue: result.reps)
+    }
+
     _localNotes = State(initialValue: result.notes ?? "")
     _localOtherUnit = State(initialValue: result.otherUnit)
 
+    // Time initialization remains the same...
     if let time = result.time {
-      _hours = State(initialValue: Int(time) / 3600)
-      _minutes = State(initialValue: Int(time) / 60 % 60)
-      _seconds = State(initialValue: Int(time) % 60)
-      _milliseconds = State(initialValue: Int((time.truncatingRemainder(dividingBy: 1)) * 1000))
+      let components = Self.timeIntervalToComponents(time)
+      _timeHours = State(initialValue: "\(components.hours)")
+      _timeMinutes = State(initialValue: String(format: "%02d", components.minutes))
+      _timeSeconds = State(initialValue: String(format: "%02d", components.seconds))
+    } else {
+      _timeHours = State(initialValue: "0")
+      _timeMinutes = State(initialValue: "00")
+      _timeSeconds = State(initialValue: "00")
+    }
+  }
+
+  // Helper to convert TimeInterval to H, M, S components
+  static func timeIntervalToComponents(_ time: TimeInterval) -> (hours: Int, minutes: Int, seconds: Int, milliseconds: Int) {
+    let totalSeconds = Int(time)
+    let hours = totalSeconds / 3600
+    let minutes = (totalSeconds % 3600) / 60
+    let seconds = totalSeconds % 60
+    let milliseconds = Int((time.truncatingRemainder(dividingBy: 1)) * 1000)
+    return (hours, minutes, seconds, milliseconds)
+  }
+
+  // Helper to convert H, M, S strings back to TimeInterval
+  private func calculateTimeInterval() -> TimeInterval? {
+    guard let hours = Int(timeHours),
+          let minutes = Int(timeMinutes),
+          let seconds = Int(timeSeconds) else {
+      // Handle invalid input - perhaps return nil or 0?
+      // For simplicity, returning nil if any part is invalid non-numeric
+      // Or return 0 if a partial time (like just seconds) is okay
+      return nil // Or TimeInterval(0) if 0 is a valid "not set" state
+    }
+
+    // Basic validation
+    if hours < 0 || minutes < 0 || minutes > 59 || seconds < 0 || seconds > 59 {
+      return nil // Invalid time components
+    }
+
+    let totalSeconds = TimeInterval(hours * 3600 + minutes * 60 + seconds)
+    return totalSeconds
+  }
+
+  private func handleSave() {
+    saveChanges()
+    if isNew {
+      modelContext.insert(result)
+    }
+    dismiss()
+  }
+
+  private struct CustomSection<Content: View, Header: View>: View {
+    let content: Content
+    let header: Header
+
+    init(@ViewBuilder content: () -> Content, @ViewBuilder header: () -> Header) {
+      self.content = content()
+      self.header = header()
+    }
+
+    var body: some View {
+      VStack(alignment: .leading, spacing: 8) {
+        header
+          .font(.subheadline)
+          .foregroundStyle(.secondary)
+          .padding(.horizontal)
+        VStack(spacing: 0) {
+          content
+            .padding()
+        }
+        .background(Color(.secondarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .padding(.horizontal)
+      }
+      .padding(.vertical, 8)
     }
   }
 
   var body: some View {
-    Form {
-      Section {
-        DatePicker("Date", selection: $localDate, displayedComponents: [.date])
-      }
+    ScrollView {
+      VStack(spacing: 0) {
 
-      switch result.exercise?.scoreType {
-      case .time:
-        Section("Time") {
-          HStack {
-            Picker("Hours", selection: $hours) {
-              ForEach(0..<24) { hour in
-                Text("\(hour)").tag(hour)
-              }
-            }
-            .pickerStyle(.wheel)
-            .frame(width: 100)
-
-            Text(":")
-
-            Picker("Minutes", selection: $minutes) {
-              ForEach(0..<60) { minute in
-                Text(String(format: "%02d", minute)).tag(minute)
-              }
-            }
-            .pickerStyle(.wheel)
-            .frame(width: 100)
-
-            Text(":")
-
-            Picker("Seconds", selection: $seconds) {
-              ForEach(0..<60) { second in
-                Text(String(format: "%02d", second)).tag(second)
-              }
-            }
-            .pickerStyle(.wheel)
-            .frame(width: 100)
+          DatePicker(selection: $localDate, displayedComponents: [.date]) {
+            Text("Date")
+              .foregroundStyle(.secondary)
           }
-        }
+          .padding()
 
-      case .weight:
-        Section("Weight") {
-          HStack {
-            TextField("Weight", value: $localWeight, format: .number)
-              .keyboardType(.numberPad)
-            Text(appSettings.weightUnit.rawValue)
-          }
 
-          VStack {
-            HStack {
-              Text("Reps:")
-              TextField("Reps", value: $localReps, format: .number)
+        // --- Dynamic Sections Based on Score Type ---
+        switch result.exercise?.scoreType {
+        case .time:
+          CustomSection {
+            HStack(spacing: 5) {
+              TextField("H", text: $timeHours)
                 .keyboardType(.numberPad)
-                .multilineTextAlignment(.trailing)
-            }
-
-            Stepper("", value: $localReps)
-          }
-        }
-
-      case .reps:
-        Section("Reps") {
-          VStack {
-            HStack {
-              Text("Reps:")
-              TextField("Reps", value: $localReps, format: .number)
+                .frame(maxWidth: 60)
+                .multilineTextAlignment(.center)
+                .textFieldStyle(RoundedBorderTextFieldStyle())
+              Text(":").font(.headline).foregroundColor(.secondary)
+              TextField("M", text: $timeMinutes)
                 .keyboardType(.numberPad)
-                .multilineTextAlignment(.trailing)
-            }
-
-            Stepper("", value: $localReps)
-          }
-        }
-
-      case .other:
-        Section(result.exercise?.otherUnits ?? "Value") {
-          TextField("Value", value: $localOtherUnit, format: .number)
-            .keyboardType(.decimalPad)
-        }
-
-      case .none:
-        EmptyView()
-      }
-
-      Section("Notes") {
-        TextField("Notes", text: $localNotes, axis: .vertical)
-          .lineLimit(1...10)
-      }
-
-      if !isNew {
-        Section {
-          Button(role: .destructive) {
-            modelContext.delete(result)
-            dismiss()
-          } label: {
-            HStack {
+                .frame(maxWidth: 60)
+                .multilineTextAlignment(.center)
+                .textFieldStyle(RoundedBorderTextFieldStyle())
+              Text(":").font(.headline).foregroundColor(.secondary)
+              TextField("S", text: $timeSeconds)
+                .keyboardType(.numberPad)
+                .frame(maxWidth: 60)
+                .multilineTextAlignment(.center)
+                .textFieldStyle(RoundedBorderTextFieldStyle())
               Spacer()
+            }
+          } header: {
+            Text("Time")
+          }
+
+        case .weight:
+          CustomSection {
+            VStack(spacing: 16) {
+              HStack {
+                Text("Weight")
+                  .foregroundStyle(.secondary)
+                Spacer()
+                TextField("Weight", value: $localWeight, format: .number)
+                  .keyboardType(.decimalPad)
+                  .multilineTextAlignment(.trailing)
+                  .frame(maxWidth: 100)
+                Text(appSettings.weightUnit.rawValue)
+                  .foregroundStyle(.secondary)
+              }
+
+              HStack {
+                Text("Reps")
+                  .foregroundStyle(.secondary)
+                Spacer()
+                TextField("Reps", value: $localReps, format: .number)
+                  .keyboardType(.numberPad)
+                  .multilineTextAlignment(.trailing)
+                  .frame(maxWidth: 100)
+              }
+
+              ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                  ForEach(commonReps, id: \.self) { rep in
+                    Button("\(rep)") {
+                      localReps = rep
+                      UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder),
+                                                      to: nil, from: nil, for: nil)
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(localReps == rep ? .accentColor : .secondary)
+                  }
+                }
+              }
+            }
+          } header: {
+            Text("Performance")
+          }
+
+        case .reps:
+          CustomSection {
+            VStack(spacing: 16) {
+              HStack {
+                Text("Reps")
+                  .foregroundStyle(.secondary)
+                Spacer()
+                TextField("Reps", value: $localReps, format: .number)
+                  .keyboardType(.numberPad)
+                  .multilineTextAlignment(.trailing)
+                  .frame(maxWidth: 100)
+              }
+
+              ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                  ForEach(commonReps, id: \.self) { rep in
+                    Button("\(rep)") {
+                      localReps = rep
+                      UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder),
+                                                      to: nil, from: nil, for: nil)
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(localReps == rep ? .accentColor : .secondary)
+                  }
+                }
+              }
+            }
+          } header: {
+            Text("Performance")
+          }
+
+        case .other:
+          CustomSection {
+            HStack {
+              Text(result.exercise?.otherUnits ?? "Value")
+                .foregroundStyle(.secondary)
+              Spacer()
+              TextField("Value", value: $localOtherUnit, format: .number)
+                .keyboardType(.decimalPad)
+                .multilineTextAlignment(.trailing)
+                .frame(maxWidth: 150)
+            }
+          } header: {
+            Text("Performance")
+          }
+
+        case .none:
+          EmptyView()
+        }
+
+        CustomSection {
+          TextEditor(text: $localNotes)
+            .frame(minHeight: 100)
+            .font(.body)
+            .scrollContentBackground(.hidden)
+            .background(Color(.systemBackground))
+            .overlay {
+              if localNotes.isEmpty {
+                Text("Optional notes about the set...")
+                  .foregroundColor(Color(uiColor: .placeholderText))
+                  .padding(.leading, 4)
+                  .padding(.top, 8)
+                  .allowsHitTesting(false)
+              }
+            }
+        } header: {
+          Text("Notes")
+        }
+
+        if !isNew {
+          CustomSection {
+            Button(role: .destructive) {
+              modelContext.delete(result)
+              dismiss()
+            } label: {
               Text("Delete Result")
-              Spacer()
+                .frame(maxWidth: .infinity, alignment: .center)
             }
+          } header: {
+            EmptyView()
           }
         }
       }
     }
-    .navigationTitle(result.exercise?.name ?? "New Result")
+    .background(Color(.systemBackground))
+    .scrollDismissesKeyboard(.interactively)
     .navigationBarTitleDisplayMode(.inline)
+    .navigationBarBackButtonHidden(true)
     .toolbar {
       ToolbarItem(placement: .cancellationAction) {
         Button("Cancel") {
@@ -152,46 +297,71 @@ struct ExerciseResultEditView: View {
       }
       ToolbarItem(placement: .confirmationAction) {
         Button("Save") {
-          saveChanges()
-          if isNew {
-            modelContext.insert(result)
-          }
-          dismiss()
+          handleSave()
         }
-      }
-    }
-    .onAppear {
-      // Initialize local state
-      localDate = result.date
-      localWeight = result.weight
-      localReps = result.reps ?? 0
-      localNotes = result.notes ?? ""
-      localOtherUnit = result.otherUnit
-
-      if let time = result.time {
-        hours = Int(time) / 3600
-        minutes = Int(time) / 60 % 60
-        seconds = Int(time) % 60
-        milliseconds = Int((time.truncatingRemainder(dividingBy: 1)) * 1000)
+        .buttonStyle(.borderedProminent)
+        .disabled(!isValid())
       }
     }
   }
 
-  private func calculateTimeInterval() -> TimeInterval {
-    let totalSeconds = TimeInterval(hours * 3600 + minutes * 60 + seconds)
-    let totalMilliseconds = TimeInterval(milliseconds) / 1000.0
-    return totalSeconds + totalMilliseconds
-  }
-
+  // --- Save Logic ---
   private func saveChanges() {
-    // Update all properties at once when saving
     result.date = localDate
-    if result.exercise?.scoreType == .time {
+    result.notes = localNotes.isEmpty ? nil : localNotes // Store nil if empty
+
+    // Update based on score type
+    switch result.exercise?.scoreType {
+    case .time:
       result.time = calculateTimeInterval()
+      // Clear other fields if they aren't relevant for time score
+      result.weight = nil
+      result.reps = nil
+      result.otherUnit = nil
+    case .weight:
+      result.weight = localWeight
+      result.reps = localReps
+      // Clear others
+      result.time = nil
+      result.otherUnit = nil
+    case .reps:
+      result.reps = localReps
+      // Clear others
+      result.time = nil
+      result.weight = nil
+      result.otherUnit = nil
+    case .other:
+      result.otherUnit = localOtherUnit
+      // Clear others
+      result.time = nil
+      result.weight = nil
+      result.reps = nil
+    case .none:
+      // Clear all performance fields if score type is none
+      result.time = nil
+      result.weight = nil
+      result.reps = nil
+      result.otherUnit = nil
     }
-    result.weight = localWeight
-    result.reps = localReps == 0 ? nil : localReps
-    result.notes = localNotes.isEmpty ? nil : localNotes
-    result.otherUnit = localOtherUnit
+  }
+
+  // --- Validation Logic (Optional but Recommended) ---
+  private func isValid() -> Bool {
+    // Add checks here. E.g., ensure required fields are filled for the score type.
+    switch result.exercise?.scoreType {
+    case .time:
+      // Check if time components parse correctly
+      return calculateTimeInterval() != nil
+    case .weight:
+      // Weight and Reps are common, but maybe allow only weight? Check your logic.
+      // For PRs, usually both are needed. Or at least weight.
+      return localWeight != nil && localWeight ?? 0 > 0 && localReps != nil && localReps ?? 0 > 0
+    case .reps:
+      return localReps != nil && localReps ?? 0 > 0
+    case .other:
+      return localOtherUnit != nil && localOtherUnit ?? 0 > 0
+    case .none:
+      return true // No specific fields required
+    }
   }
 }
