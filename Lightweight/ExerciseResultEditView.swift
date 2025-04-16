@@ -5,7 +5,7 @@ struct ExerciseResultEditView: View {
   @Environment(\.dismiss) private var dismiss
   @Environment(\.modelContext) private var modelContext
   @Environment(\.appSettings) private var appSettings
-  @Bindable var result: ExerciseResult
+  let result: ExerciseResult
   let isNew: Bool
 
   // For time input
@@ -14,13 +14,34 @@ struct ExerciseResultEditView: View {
   @State private var seconds = 0
   @State private var milliseconds = 0
 
-  // For reps input
-  @State private var repsCount: Int = 0
+  // Local state to prevent constant updates
+  @State private var localDate: Date 
+  @State private var localWeight: Int?
+  @State private var localReps: Int = 0
+  @State private var localNotes: String = ""
+  @State private var localOtherUnit: Double?
+
+  init(result: ExerciseResult, isNew: Bool) {
+    self.result = result
+    self.isNew = isNew
+    _localDate = State(initialValue: result.date)
+    _localWeight = State(initialValue: result.weight)
+    _localReps = State(initialValue: result.reps ?? 0)
+    _localNotes = State(initialValue: result.notes ?? "")
+    _localOtherUnit = State(initialValue: result.otherUnit)
+
+    if let time = result.time {
+      _hours = State(initialValue: Int(time) / 3600)
+      _minutes = State(initialValue: Int(time) / 60 % 60)
+      _seconds = State(initialValue: Int(time) % 60)
+      _milliseconds = State(initialValue: Int((time.truncatingRemainder(dividingBy: 1)) * 1000))
+    }
+  }
 
   var body: some View {
     Form {
       Section {
-        DatePicker("Date", selection: $result.date, displayedComponents: [.date])
+        DatePicker("Date", selection: $localDate, displayedComponents: [.date])
       }
 
       switch result.exercise?.scoreType {
@@ -55,15 +76,12 @@ struct ExerciseResultEditView: View {
             .pickerStyle(.wheel)
             .frame(width: 100)
           }
-          .onChange(of: [hours, minutes, seconds, milliseconds]) {
-            updateTimeInterval()
-          }
         }
 
       case .weight:
         Section("Weight") {
           HStack {
-            TextField("Weight", value: $result.weight, format: .number)
+            TextField("Weight", value: $localWeight, format: .number)
               .keyboardType(.numberPad)
             Text(appSettings.weightUnit.rawValue)
           }
@@ -71,15 +89,12 @@ struct ExerciseResultEditView: View {
           VStack {
             HStack {
               Text("Reps:")
-              TextField("Reps", value: $repsCount, format: .number)
+              TextField("Reps", value: $localReps, format: .number)
                 .keyboardType(.numberPad)
                 .multilineTextAlignment(.trailing)
             }
 
-            Stepper("", value: $repsCount)
-          }
-          .onChange(of: repsCount) {
-            result.reps = repsCount
+            Stepper("", value: $localReps)
           }
         }
 
@@ -88,21 +103,18 @@ struct ExerciseResultEditView: View {
           VStack {
             HStack {
               Text("Reps:")
-              TextField("Reps", value: $repsCount, format: .number)
+              TextField("Reps", value: $localReps, format: .number)
                 .keyboardType(.numberPad)
                 .multilineTextAlignment(.trailing)
             }
 
-            Stepper("", value: $repsCount)
-          }
-          .onChange(of: repsCount) {
-            result.reps = repsCount
+            Stepper("", value: $localReps)
           }
         }
 
       case .other:
         Section(result.exercise?.otherUnits ?? "Value") {
-          TextField("Value", value: $result.otherUnit, format: .number)
+          TextField("Value", value: $localOtherUnit, format: .number)
             .keyboardType(.decimalPad)
         }
 
@@ -111,18 +123,36 @@ struct ExerciseResultEditView: View {
       }
 
       Section("Notes") {
-        TextField("Notes", text: .init(
-          get: { self.result.notes ?? "" },
-          set: { self.result.notes = $0.isEmpty ? nil : $0 }
-        ), axis: .vertical)
-        .lineLimit(1...10)
+        TextField("Notes", text: $localNotes, axis: .vertical)
+          .lineLimit(1...10)
+      }
+
+      if !isNew {
+        Section {
+          Button(role: .destructive) {
+            modelContext.delete(result)
+            dismiss()
+          } label: {
+            HStack {
+              Spacer()
+              Text("Delete Result")
+              Spacer()
+            }
+          }
+        }
       }
     }
     .navigationTitle(result.exercise?.name ?? "New Result")
     .navigationBarTitleDisplayMode(.inline)
     .toolbar {
-      ToolbarItem(placement: .topBarTrailing) {
-        Button("Done") {
+      ToolbarItem(placement: .cancellationAction) {
+        Button("Cancel") {
+          dismiss()
+        }
+      }
+      ToolbarItem(placement: .confirmationAction) {
+        Button("Save") {
+          saveChanges()
           if isNew {
             modelContext.insert(result)
           }
@@ -131,26 +161,37 @@ struct ExerciseResultEditView: View {
       }
     }
     .onAppear {
+      // Initialize local state
+      localDate = result.date
+      localWeight = result.weight
+      localReps = result.reps ?? 0
+      localNotes = result.notes ?? ""
+      localOtherUnit = result.otherUnit
+
       if let time = result.time {
         hours = Int(time) / 3600
         minutes = Int(time) / 60 % 60
         seconds = Int(time) % 60
         milliseconds = Int((time.truncatingRemainder(dividingBy: 1)) * 1000)
       }
-      repsCount = result.reps ?? 0
     }
   }
 
-  private func updateTimeInterval() {
+  private func calculateTimeInterval() -> TimeInterval {
     let totalSeconds = TimeInterval(hours * 3600 + minutes * 60 + seconds)
     let totalMilliseconds = TimeInterval(milliseconds) / 1000.0
-    result.time = totalSeconds + totalMilliseconds
+    return totalSeconds + totalMilliseconds
+  }
+
+  private func saveChanges() {
+    // Update all properties at once when saving
+    result.date = localDate
+    if result.exercise?.scoreType == .time {
+      result.time = calculateTimeInterval()
+    }
+    result.weight = localWeight
+    result.reps = localReps == 0 ? nil : localReps
+    result.notes = localNotes.isEmpty ? nil : localNotes
+    result.otherUnit = localOtherUnit
   }
 }
-
-//#Preview {
-//  NavigationStack {
-//    ExerciseResultEditView(result: LightweightApp.DataController.previewContainer.mainContext.exerciseWithSampleResults().results?.first!, isNew: false)
-//  }
-//  .modelContainer(LightweightApp.DataController.previewContainer)
-//}

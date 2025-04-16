@@ -104,7 +104,13 @@ class FirstLaunchManager {
       otherUnits: "calories"
     )
 
-    let exercises = [backSquat, snatch, bike]
+    let sample = Exercise(
+      name: "Sample Exercises",
+      detail: "Slide to delete",
+      scoreType: .weight
+    )
+
+    let exercises = [backSquat, snatch, bike, sample]
     exercises.forEach { context.insert($0) }
 
     // Add a sample result for back squat

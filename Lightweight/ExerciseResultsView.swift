@@ -10,30 +10,21 @@ struct ExerciseResultsView: View {
   @State private var exerciseName: String = ""
   @State private var exerciseDetail: String = ""
   @State private var showingNewResult = false
+  @State private var newResult: ExerciseResult?
 
   init(exercise: Exercise) {
     self.exercise = exercise
-    //    let exerciseScoreType = exercise.scoreType
-    //    let sortDescriptor: SortDescriptor<ExerciseResult> = {
-    //      switch exerciseScoreType {
-    //      case .weight:
-    //        return SortDescriptor(\ExerciseResult.weight, order: .reverse)
-    //      case .reps:
-    //        return SortDescriptor(\ExerciseResult.reps, order: .reverse)
-    //      case .time:
-    //        return SortDescriptor(\ExerciseResult.time, order: .forward)
-    //      case .other:
-    //        return SortDescriptor(\ExerciseResult.otherUnit, order: .reverse)
-    //      }
-    //    }()
-
     let exerciseUUID = exercise.uuid
-
     _results = Query(
       filter: #Predicate<ExerciseResult> { result in
         result.exercise?.uuid == exerciseUUID
       },
-      sort: [SortDescriptor(\ExerciseResult.weight, order: .reverse),SortDescriptor(\ExerciseResult.reps, order: .reverse),SortDescriptor(\ExerciseResult.time, order: .forward),SortDescriptor(\ExerciseResult.otherUnit, order: .reverse)]
+      sort: [
+        SortDescriptor(\ExerciseResult.weight, order: .reverse),
+        SortDescriptor(\ExerciseResult.reps, order: .reverse),
+        SortDescriptor(\ExerciseResult.time, order: .forward),
+        SortDescriptor(\ExerciseResult.otherUnit, order: .reverse)
+      ]
     )
   }
 
@@ -72,7 +63,10 @@ struct ExerciseResultsView: View {
         }
       }
       ToolbarItem(placement: .topBarTrailing) {
-        Button(action: addNewResult) {
+        Button(action: {
+          newResult = ExerciseResult(exercise: exercise)
+          showingNewResult = true
+        }) {
           Label("Add Result", systemImage: "plus")
         }
       }
@@ -86,9 +80,15 @@ struct ExerciseResultsView: View {
         exercise.detail = exerciseDetail.isEmpty ? nil : exerciseDetail
       }
     }
-    .sheet(isPresented: $showingNewResult) {
-      NavigationStack {
-        ExerciseResultEditView(result: ExerciseResult(exercise: exercise), isNew: true)
+    .sheet(isPresented: $showingNewResult, onDismiss: {
+      if newResult?.modelContext == nil {
+        newResult = nil
+      }
+    }) {
+      if let result = newResult {
+        NavigationStack {
+          ExerciseResultEditView(result: result, isNew: true)
+        }
       }
     }
   }
@@ -118,7 +118,7 @@ struct ExerciseResultsView: View {
       }
     case .other:
       if let value = result.otherUnit, let units = exercise.otherUnits?.lowercased() {
-        let formattedValue = String(format: "%.3g", value) // Removes trailing zeros
+        let formattedValue = String(format: "%.3g", value)
         Text("^[\(formattedValue) \(units)](inflect: true)")
       }
     }
@@ -151,7 +151,6 @@ struct ExerciseResultsView: View {
   .modelContainer(LightweightApp.DataController.previewContainer)
 }
 
-// Helper extension for previews
 extension ModelContext {
   func exerciseWithSampleResults() -> Exercise {
     let exercise = Exercise(name: "Back Squat", scoreType: .weight)
