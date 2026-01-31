@@ -29,19 +29,34 @@ struct ExerciseResultsView: View {
   }
   
   var body: some View {
-    List {
-      ForEach(results) { result in
-        NavigationLink(destination: ExerciseResultEditView(result: result, isNew: false)) {
-          HStack {
-            resultDisplay(for: result)
-            Spacer()
-            Text(result.date, format: .dateTime.day().month())
-              .foregroundStyle(.secondary)
+    Group {
+      if results.isEmpty {
+        EmptyStateView(
+          title: "No Results Yet",
+          message: "Add your first workout result for this exercise",
+          systemImage: "chart.line.uptrend.xyaxis",
+          action: {
+            newResult = ExerciseResult(exercise: exercise)
+            showingNewResult = true
+          },
+          actionLabel: "Add Result"
+        )
+      } else {
+        List {
+          ForEach(results) { result in
+            NavigationLink(destination: ExerciseResultEditView(result: result, isNew: false)) {
+              HStack {
+                resultDisplay(for: result)
+                Spacer()
+                Text(result.date, format: .dateTime.day().month())
+                  .foregroundStyle(.secondary)
+              }
+            }
           }
         }
+        .listStyle(.plain)
       }
     }
-    .listStyle(.plain)
     .background(Color(.systemBackground))
     .navigationBarTitleDisplayMode(.inline)
     .toolbar {
@@ -96,12 +111,13 @@ struct ExerciseResultsView: View {
     switch exercise.scoreType {
     case .time:
       if let time = result.time {
-        Text(formatTime(time))
+        Text(Formatters.formatTime(time))
       }
     case .weight:
       if let weight = result.weight {
         HStack(spacing: 4) {
-          Text("\(appSettings.weightUnit == .kilograms ? weight : Int(Double(weight) * 2.20462)) \(appSettings.weightUnit.rawValue)")
+          let displayWeight = appSettings.weightUnit == .kilograms ? weight : Int(Double(weight) * 2.20462)
+          Text("\(displayWeight) \(appSettings.weightUnit.rawValue)")
           if let reps = result.reps {
             Text("^[\(reps) rep](inflect: true)")
               .foregroundStyle(.secondary)
@@ -119,21 +135,6 @@ struct ExerciseResultsView: View {
         let formattedValue = String(format: "%.3g", value)
         Text("^[\(formattedValue) \(units)](inflect: true)")
       }
-    }
-  }
-  
-  private func formatTime(_ timeInterval: TimeInterval) -> String {
-    let hours = Int(timeInterval) / 3600
-    let minutes = Int(timeInterval) / 60 % 60
-    let seconds = Int(timeInterval) % 60
-    let milliseconds = Int((timeInterval.truncatingRemainder(dividingBy: 1)) * 1000)
-    
-    if hours > 0 {
-      return String(format: "%d:%02d:%02d", hours, minutes, seconds)
-    } else if minutes > 0 {
-      return String(format: "%d:%02d", minutes, seconds)
-    } else {
-      return String(format: "%d.%03d", seconds, milliseconds)
     }
   }
   

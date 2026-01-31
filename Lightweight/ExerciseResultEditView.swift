@@ -41,9 +41,9 @@ struct ExerciseResultEditView: View {
     _localNotes = State(initialValue: result.notes ?? "")
     _localOtherUnit = State(initialValue: result.otherUnit)
 
-    // Time initialization remains the same...
+    // Time initialization
     if let time = result.time {
-      let components = Self.timeIntervalToComponents(time)
+      let components = Formatters.timeIntervalToComponents(time)
       _timeHours = State(initialValue: "\(components.hours)")
       _timeMinutes = State(initialValue: String(format: "%02d", components.minutes))
       _timeSeconds = State(initialValue: String(format: "%02d", components.seconds))
@@ -54,15 +54,6 @@ struct ExerciseResultEditView: View {
     }
   }
 
-  // Helper to convert TimeInterval to H, M, S components
-  static func timeIntervalToComponents(_ time: TimeInterval) -> (hours: Int, minutes: Int, seconds: Int, milliseconds: Int) {
-    let totalSeconds = Int(time)
-    let hours = totalSeconds / 3600
-    let minutes = (totalSeconds % 3600) / 60
-    let seconds = totalSeconds % 60
-    let milliseconds = Int((time.truncatingRemainder(dividingBy: 1)) * 1000)
-    return (hours, minutes, seconds, milliseconds)
-  }
 
   // Helper to convert H, M, S strings back to TimeInterval
   private func calculateTimeInterval() -> TimeInterval? {
@@ -89,6 +80,7 @@ struct ExerciseResultEditView: View {
     if isNew {
       modelContext.insert(result)
     }
+    HapticManager.success()
     dismiss()
   }
 
@@ -187,6 +179,7 @@ struct ExerciseResultEditView: View {
                 HStack(spacing: 8) {
                   ForEach(commonReps, id: \.self) { rep in
                     Button("\(rep)") {
+                      HapticManager.selection()
                       localReps = rep
                       UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder),
                                                       to: nil, from: nil, for: nil)
@@ -218,6 +211,7 @@ struct ExerciseResultEditView: View {
                 HStack(spacing: 8) {
                   ForEach(commonReps, id: \.self) { rep in
                     Button("\(rep)") {
+                      HapticManager.selection()
                       localReps = rep
                       UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder),
                                                       to: nil, from: nil, for: nil)
@@ -273,6 +267,7 @@ struct ExerciseResultEditView: View {
         if !isNew {
           CustomSection {
             Button(role: .destructive) {
+              HapticManager.warning()
               modelContext.delete(result)
               dismiss()
             } label: {

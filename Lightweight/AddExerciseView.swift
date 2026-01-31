@@ -9,6 +9,7 @@ struct AddExerciseView: View {
   @State private var detail: String = ""
   @State private var scoreType: ScoreType = .weight
   @State private var otherUnits: String = ""
+  @State private var saveError: Error?
   
   var body: some View {
     NavigationStack {
@@ -41,23 +42,32 @@ struct AddExerciseView: View {
         }
         ToolbarItem(placement: .confirmationAction) {
           Button("Add") {
+            HapticManager.lightImpact()
             saveExercise()
           }
           .disabled(name.isEmpty || (scoreType == .other && otherUnits.isEmpty))
         }
       }
+      .errorAlert(error: $saveError)
     }
   }
   
   private func saveExercise() {
-    let exercise = Exercise(
-      name: name,
-      detail: detail.isEmpty ? nil : detail,
-      scoreType: scoreType,
-      otherUnits: scoreType == .other ? otherUnits : nil
-    )
-    modelContext.insert(exercise)
-    dismiss()
+    do {
+      let exercise = Exercise(
+        name: name,
+        detail: detail.isEmpty ? nil : detail,
+        scoreType: scoreType,
+        otherUnits: scoreType == .other ? otherUnits : nil
+      )
+      modelContext.insert(exercise)
+      try modelContext.save()
+      HapticManager.success()
+      dismiss()
+    } catch {
+      HapticManager.error()
+      saveError = error
+    }
   }
 }
 
