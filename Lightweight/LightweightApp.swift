@@ -10,14 +10,38 @@ import SwiftData
 
 @main
 struct LightweightApp: App {
+  /// CloudKit container that backs iCloud sync. Must be owned by the app's
+  /// development team; keep this in sync with the value in the entitlements.
+  static let cloudKitContainerID = "iCloud.com.crowtocracy.Lightweight"
+
   var sharedModelContainer: ModelContainer = {
     let schema = Schema([
-      Exercise.self,ExerciseResult.self
+      Exercise.self, ExerciseResult.self
     ])
-    let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
+    // Primary configuration: SwiftData mirrored to the app's private CloudKit
+    // database, so data is backed up to iCloud and synced across the user's
+    // devices automatically.
+    let cloudConfiguration = ModelConfiguration(
+      schema: schema,
+      isStoredInMemoryOnly: false,
+      cloudKitDatabase: .private(LightweightApp.cloudKitContainerID)
+    )
+
+    if let container = try? ModelContainer(for: schema, configurations: [cloudConfiguration]) {
+      return container
+    }
+
+    // Fallback: if CloudKit can't be initialised (e.g. entitlement or
+    // provisioning issue, or the user has no iCloud account), keep working with
+    // an on-device store instead of crashing and losing access to the data.
+    let localConfiguration = ModelConfiguration(
+      schema: schema,
+      isStoredInMemoryOnly: false,
+      cloudKitDatabase: .none
+    )
     do {
-      return try ModelContainer(for: schema, configurations: [modelConfiguration])
+      return try ModelContainer(for: schema, configurations: [localConfiguration])
     } catch {
       fatalError("Could not create ModelContainer: \(error)")
     }
@@ -27,7 +51,7 @@ struct LightweightApp: App {
     WindowGroup {
       ContentView()
         .onAppear {
-          FirstLaunchManager.checkAndSetupInitialData(container: sharedModelContainer)
+          FirstLaunchManager.prepareStore(container: sharedModelContainer)
         }
     }
     .modelContainer(sharedModelContainer)
@@ -48,7 +72,7 @@ struct LightweightApp: App {
           exercise: backSquat,
           date: Date(),
           notes: "Felt strong",
-          weight: 225,
+          weightKg: 100,
           reps: 5
         )
         container.mainContext.insert(result1)
@@ -56,7 +80,7 @@ struct LightweightApp: App {
         let result2 = ExerciseResult(
           exercise: backSquat,
           date: Date().addingTimeInterval(-86400), // Yesterday
-          weight: 215,
+          weightKg: 95,
           reps: 5
         )
         container.mainContext.insert(result2)
@@ -69,23 +93,46 @@ struct LightweightApp: App {
   }
 }
 
-// First Launch Manager to handle initial data setup
+// First Launch Manager to handle initial data setup and lightweight migrations.
 @MainActor
 class FirstLaunchManager {
   private static let wasLaunchedBefore = "wasLaunchedBefore"
 
-  static func checkAndSetupInitialData(container: ModelContainer) {
-    let defaults = UserDefaults.standard
+  /// Run once per launch: migrate any legacy data, then seed sample data on a
+  /// genuinely fresh install.
+  static func prepareStore(container: ModelContainer) {
+    let context = container.mainContext
+    migrateLegacyWeights(context: context)
 
-    if !defaults.bool(forKey: wasLaunchedBefore) {
-      setupInitialData(container: container)
-      defaults.set(true, forKey: wasLaunchedBefore)
+    let defaults = UserDefaults.standard
+    guard !defaults.bool(forKey: wasLaunchedBefore) else { return }
+
+    // Only seed when the store is empty. A device restoring from iCloud might
+    // not have synced yet, but this still prevents the common case of a
+    // reinstall duplicating the sample exercises against already-synced data.
+    let existingCount = (try? context.fetchCount(FetchDescriptor<Exercise>())) ?? 0
+    if existingCount == 0 {
+      setupInitialData(context: context)
     }
+    defaults.set(true, forKey: wasLaunchedBefore)
   }
 
-  private static func setupInitialData(container: ModelContainer) {
-    let context = container.mainContext
+  /// Backfill `weightKg` from the legacy integer `weight` field. Legacy values
+  /// were treated as kilograms by the display code, so we carry that forward.
+  private static func migrateLegacyWeights(context: ModelContext) {
+    let descriptor = FetchDescriptor<ExerciseResult>(
+      predicate: #Predicate<ExerciseResult> { $0.weightKg == nil && $0.weight != nil }
+    )
+    guard let legacyResults = try? context.fetch(descriptor), !legacyResults.isEmpty else { return }
+    for result in legacyResults {
+      if let oldWeight = result.weight {
+        result.weightKg = Double(oldWeight)
+      }
+    }
+    try? context.save()
+  }
 
+  private static func setupInitialData(context: ModelContext) {
     // Sample exercises
     let backSquat = Exercise(
       name: "Back Squat",
@@ -118,9 +165,10 @@ class FirstLaunchManager {
       exercise: backSquat,
       date: Date(),
       notes: "First workout - feeling good!",
-      weight: 135,
+      weightKg: 60,
       reps: 5
     )
     context.insert(sampleResult)
+    try? context.save()
   }
 }

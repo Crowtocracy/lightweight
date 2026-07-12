@@ -10,7 +10,7 @@ struct ExerciseResultEditView: View {
 
   // Local state for editing
   @State private var localDate: Date
-  @State private var localWeight: Int?
+  @State private var localWeightKg: Double?
   @State private var localReps: Int?
   @State private var localNotes: String
   @State private var localOtherUnit: Double?
@@ -29,13 +29,16 @@ struct ExerciseResultEditView: View {
     // --- Initialize State ---
     // Use Date() for new results, otherwise the existing date
     _localDate = State(initialValue: isNew ? Date() : result.date)
-    _localWeight = State(initialValue: result.weight)
+    _localWeightKg = State(initialValue: result.weightKg)
 
-    // Initialize reps to 1 for new weight-based exercises
-    if isNew && result.exercise?.scoreType == .weight {
+    // Reps come prefilled when repeating the last set. Otherwise default new
+    // weight-based results to a single rep; leave everything else as-is.
+    if let reps = result.reps {
+      _localReps = State(initialValue: reps)
+    } else if isNew && result.exercise?.scoreType == .weight {
       _localReps = State(initialValue: 1)
     } else {
-      _localReps = State(initialValue: result.reps)
+      _localReps = State(initialValue: nil)
     }
 
     _localNotes = State(initialValue: result.notes ?? "")
@@ -75,11 +78,43 @@ struct ExerciseResultEditView: View {
     return totalSeconds
   }
 
+  // Weight is stored in kilograms but entered/displayed in the user's chosen
+  // unit. This binding converts between the two so the stored value never
+  // changes just because the display unit does.
+  private var weightDisplayBinding: Binding<Double?> {
+    Binding(
+      get: {
+        guard let kg = localWeightKg else { return nil }
+        return appSettings.weightUnit.fromKilograms(kg)
+      },
+      set: { newValue in
+        guard let newValue else { localWeightKg = nil; return }
+        localWeightKg = appSettings.weightUnit.toKilograms(newValue)
+      }
+    )
+  }
+
+  private func adjustWeight(by delta: Double) {
+    let unit = appSettings.weightUnit
+    let current = localWeightKg.map { unit.fromKilograms($0) } ?? 0
+    let next = max(0, current + delta)
+    localWeightKg = unit.toKilograms(next)
+    HapticManager.selection()
+  }
+
+  /// Live estimated 1RM in the display unit, when there's enough to compute it.
+  private var estimatedOneRepMax: Double? {
+    guard let kg = localWeightKg, let reps = localReps else { return nil }
+    guard let oneRM = OneRepMax.epley(weight: kg, reps: reps) else { return nil }
+    return appSettings.weightUnit.fromKilograms(oneRM)
+  }
+
   private func handleSave() {
     saveChanges()
     if isNew {
       modelContext.insert(result)
     }
+    try? modelContext.save()
     HapticManager.success()
     dismiss()
   }
@@ -157,10 +192,22 @@ struct ExerciseResultEditView: View {
                 Text("Weight")
                   .foregroundStyle(.secondary)
                 Spacer()
-                TextField("Weight", value: $localWeight, format: .number)
+                Button {
+                  adjustWeight(by: -appSettings.weightUnit.step)
+                } label: {
+                  Image(systemName: "minus.circle")
+                }
+                .buttonStyle(.borderless)
+                TextField("Weight", value: weightDisplayBinding, format: .number)
                   .keyboardType(.decimalPad)
                   .multilineTextAlignment(.trailing)
-                  .frame(maxWidth: 100)
+                  .frame(maxWidth: 80)
+                Button {
+                  adjustWeight(by: appSettings.weightUnit.step)
+                } label: {
+                  Image(systemName: "plus.circle")
+                }
+                .buttonStyle(.borderless)
                 Text(appSettings.weightUnit.rawValue)
                   .foregroundStyle(.secondary)
               }
@@ -188,6 +235,17 @@ struct ExerciseResultEditView: View {
                     .tint(localReps == rep ? .accentColor : .secondary)
                   }
                 }
+              }
+
+              if let oneRM = estimatedOneRepMax {
+                HStack {
+                  Text("Estimated 1RM")
+                    .foregroundStyle(.secondary)
+                  Spacer()
+                  Text("\(Formatters.formatNumber(oneRM)) \(appSettings.weightUnit.rawValue)")
+                    .fontWeight(.semibold)
+                }
+                .font(.subheadline)
               }
             }
           } header: {
@@ -269,6 +327,7 @@ struct ExerciseResultEditView: View {
             Button(role: .destructive) {
               HapticManager.warning()
               modelContext.delete(result)
+              try? modelContext.save()
               dismiss()
             } label: {
               Text("Delete Result")
@@ -310,11 +369,11 @@ struct ExerciseResultEditView: View {
     case .time:
       result.time = calculateTimeInterval()
       // Clear other fields if they aren't relevant for time score
-      result.weight = nil
+      result.weightKg = nil
       result.reps = nil
       result.otherUnit = nil
     case .weight:
-      result.weight = localWeight
+      result.weightKg = localWeightKg
       result.reps = localReps
       // Clear others
       result.time = nil
@@ -323,18 +382,18 @@ struct ExerciseResultEditView: View {
       result.reps = localReps
       // Clear others
       result.time = nil
-      result.weight = nil
+      result.weightKg = nil
       result.otherUnit = nil
     case .other:
       result.otherUnit = localOtherUnit
       // Clear others
       result.time = nil
-      result.weight = nil
+      result.weightKg = nil
       result.reps = nil
     case .none:
       // Clear all performance fields if score type is none
       result.time = nil
-      result.weight = nil
+      result.weightKg = nil
       result.reps = nil
       result.otherUnit = nil
     }
@@ -348,9 +407,8 @@ struct ExerciseResultEditView: View {
       // Check if time components parse correctly
       return calculateTimeInterval() != nil
     case .weight:
-      // Weight and Reps are common, but maybe allow only weight? Check your logic.
-      // For PRs, usually both are needed. Or at least weight.
-      return localWeight != nil && localWeight ?? 0 > 0 && localReps != nil && localReps ?? 0 > 0
+      // For PRs we need both a weight and a rep count to estimate a 1RM.
+      return (localWeightKg ?? 0) > 0 && (localReps ?? 0) > 0
     case .reps:
       return localReps != nil && localReps ?? 0 > 0
     case .other:

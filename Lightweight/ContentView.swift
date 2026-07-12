@@ -19,7 +19,6 @@ struct ContentView: View {
       .sheet(isPresented: $showingSettings) {
         SettingsView(appSettings: appSettingsObject)
       }
-      .searchable(text: $searchText)
       .environment(\.appSettings, appSettingsObject)
       .errorAlert(error: $currentError)
   }
@@ -34,6 +33,8 @@ struct ExerciseListView: View {
   @State private var selectedExercise: Exercise?
   @State private var showingAddExercise = false
   @State private var deleteError: Error?
+  @State private var quickLogResult: ExerciseResult?
+  @State private var showingQuickLog = false
   @StateObject private var viewModel = ExerciseListViewModel()
 
   var execerciseDescriptor: FetchDescriptor<Exercise> {
@@ -92,6 +93,15 @@ struct ExerciseListView: View {
               }
               .listRowSeparator(.visible, edges: .bottom)
               .listRowBackground(Color(UIColor.systemBackground))
+              .swipeActions(edge: .leading, allowsFullSwipe: true) {
+                Button {
+                  HapticManager.selection()
+                  startQuickLog(for: exercise)
+                } label: {
+                  Label("Log", systemImage: "plus")
+                }
+                .tint(.green)
+              }
             }
             .onDelete(perform: deleteItems)
           }
@@ -101,6 +111,7 @@ struct ExerciseListView: View {
       }
       .navigationTitle("Lightweight")
       .navigationBarTitleDisplayMode(.inline)
+      .searchable(text: $searchText)
       .navigationDestination(item: $selectedExercise) { exercise in
         ExerciseResultsView(exercise: exercise)
       }
@@ -123,10 +134,31 @@ struct ExerciseListView: View {
       .sheet(isPresented: $showingAddExercise) {
         AddExerciseView()
       }
+      .sheet(isPresented: $showingQuickLog, onDismiss: { quickLogResult = nil }) {
+        if let result = quickLogResult {
+          NavigationStack {
+            ExerciseResultEditView(result: result, isNew: true)
+          }
+        }
+      }
       .errorAlert(error: $deleteError)
     }
   }
 
+  /// Open a prefilled "log" sheet for an exercise straight from the list,
+  /// carrying over the most recent set so a repeat entry is a couple of taps.
+  private func startQuickLog(for exercise: Exercise) {
+    let mostRecent = exercise.results?.max { $0.date < $1.date }
+    quickLogResult = ExerciseResult(
+      exercise: exercise,
+      date: Date(),
+      weightKg: mostRecent?.weightKg,
+      reps: mostRecent?.reps,
+      time: mostRecent?.time,
+      otherUnit: mostRecent?.otherUnit
+    )
+    showingQuickLog = true
+  }
 
   private func deleteItems(offsets: IndexSet) {
     withAnimation {
