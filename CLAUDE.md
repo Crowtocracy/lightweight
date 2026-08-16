@@ -75,7 +75,8 @@ Lightweight/
 ## Important Conventions
 
 - All data models use SwiftData's @Model macro
-- CloudKit container: `iCloud.boisvert.lightweight`
+- CloudKit container: `iCloud.com.crowtocracy.Lightweight` (must be owned by the app's development team; keep the entitlements value and `LightweightApp.cloudKitContainerID` in sync)
+- Weight is stored canonically in kilograms (`ExerciseResult.weightKg`); pounds is a display/entry conversion only. The legacy integer `weight` field is kept solely for one-time migration.
 - Weight units stored in UserDefaults key "weightUnit"
 - Date formatting uses relative style for recent dates
 - Sample data auto-generates on first launch if no exercises exist

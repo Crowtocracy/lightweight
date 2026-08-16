@@ -6,7 +6,18 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXContainerItemProxy section */
+		ABCDEF0000000000000000A7 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = DAA3EBA32DADD3B900C5CCDD /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = DAA3EBAA2DADD3B900C5CCDD;
+			remoteInfo = Lightweight;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
+		ABCDEF0000000000000000A1 /* LightweightTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = LightweightTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		DAA3EBAB2DADD3B900C5CCDD /* Lightweight.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Lightweight.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -21,6 +32,11 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		ABCDEF0000000000000000A2 /* LightweightTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = LightweightTests;
+			sourceTree = "<group>";
+		};
 		DAA3EBAD2DADD3B900C5CCDD /* Lightweight */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
@@ -32,6 +48,13 @@
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		ABCDEF0000000000000000A5 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		DAA3EBA82DADD3B900C5CCDD /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -46,6 +69,7 @@
 			isa = PBXGroup;
 			children = (
 				DAA3EBAD2DADD3B900C5CCDD /* Lightweight */,
+				ABCDEF0000000000000000A2 /* LightweightTests */,
 				DAA3EBAC2DADD3B900C5CCDD /* Products */,
 			);
 			sourceTree = "<group>";
@@ -54,6 +78,7 @@
 			isa = PBXGroup;
 			children = (
 				DAA3EBAB2DADD3B900C5CCDD /* Lightweight.app */,
+				ABCDEF0000000000000000A1 /* LightweightTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -61,6 +86,29 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		ABCDEF0000000000000000A3 /* LightweightTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = ABCDEF0000000000000000A9 /* Build configuration list for PBXNativeTarget "LightweightTests" */;
+			buildPhases = (
+				ABCDEF0000000000000000A4 /* Sources */,
+				ABCDEF0000000000000000A5 /* Frameworks */,
+				ABCDEF0000000000000000A6 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				ABCDEF0000000000000000A8 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				ABCDEF0000000000000000A2 /* LightweightTests */,
+			);
+			name = LightweightTests;
+			packageProductDependencies = (
+			);
+			productName = LightweightTests;
+			productReference = ABCDEF0000000000000000A1 /* LightweightTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 		DAA3EBAA2DADD3B900C5CCDD /* Lightweight */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = DAA3EBB92DADD3BB00C5CCDD /* Build configuration list for PBXNativeTarget "Lightweight" */;
@@ -93,6 +141,10 @@
 				LastSwiftUpdateCheck = 1630;
 				LastUpgradeCheck = 1630;
 				TargetAttributes = {
+					ABCDEF0000000000000000A3 = {
+						CreatedOnToolsVersion = 16.3;
+						TestTargetID = DAA3EBAA2DADD3B900C5CCDD;
+					};
 					DAA3EBAA2DADD3B900C5CCDD = {
 						CreatedOnToolsVersion = 16.3;
 					};
@@ -113,11 +165,19 @@
 			projectRoot = "";
 			targets = (
 				DAA3EBAA2DADD3B900C5CCDD /* Lightweight */,
+				ABCDEF0000000000000000A3 /* LightweightTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		ABCDEF0000000000000000A6 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		DAA3EBA92DADD3B900C5CCDD /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -128,6 +188,13 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		ABCDEF0000000000000000A4 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		DAA3EBA72DADD3B900C5CCDD /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -136,6 +203,14 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		ABCDEF0000000000000000A8 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = DAA3EBAA2DADD3B900C5CCDD /* Lightweight */;
+			targetProxy = ABCDEF0000000000000000A7 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		DAA3EBBA2DADD3BB00C5CCDD /* Debug */ = {
@@ -333,6 +408,46 @@
 			};
 			name = Release;
 		};
+		ABCDEF0000000000000000B1 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = UKX3W26K7W;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.crowtocracy.LightweightTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Lightweight.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Lightweight";
+			};
+			name = Debug;
+		};
+		ABCDEF0000000000000000B2 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = UKX3W26K7W;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.crowtocracy.LightweightTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Lightweight.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Lightweight";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -350,6 +465,15 @@
 			buildConfigurations = (
 				DAA3EBBA2DADD3BB00C5CCDD /* Debug */,
 				DAA3EBBB2DADD3BB00C5CCDD /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		ABCDEF0000000000000000A9 /* Build configuration list for PBXNativeTarget "LightweightTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				ABCDEF0000000000000000B1 /* Debug */,
+				ABCDEF0000000000000000B2 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

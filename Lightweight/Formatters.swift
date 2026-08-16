@@ -39,31 +39,34 @@ enum Formatters {
     }
     
     // MARK: - Weight Formatting
-    
-    static func formatWeight(_ weight: Int, unit: WeightUnit) -> String {
-        let displayWeight = unit == .kilograms ? weight : Int(Double(weight) * 2.20462)
-        return "\(displayWeight) \(unit.rawValue)"
+
+    /// Format a canonical kilogram value for display in the user's chosen unit.
+    static func formatWeight(kg: Double, unit: WeightUnit) -> String {
+        let displayValue = unit.fromKilograms(kg)
+        return "\(formatNumber(displayValue)) \(unit.rawValue)"
     }
-    
-    static func formatWeightWithReps(_ weight: Int, reps: Int?, unit: WeightUnit) -> String {
-        let displayWeight = unit == .kilograms ? weight : Int(Double(weight) * 2.20462)
+
+    /// Format a weight (kg) with its rep count, e.g. "62.5kg × 5".
+    static func formatWeightWithReps(kg: Double, reps: Int?, unit: WeightUnit) -> String {
+        let displayValue = unit.fromKilograms(kg)
         if let reps = reps {
-            return "\(displayWeight)\(unit.rawValue) × \(reps)"
+            return "\(formatNumber(displayValue))\(unit.rawValue) × \(reps)"
         }
-        return "\(displayWeight)\(unit.rawValue)"
+        return "\(formatNumber(displayValue))\(unit.rawValue)"
     }
-    
-    static func convertWeight(_ weight: Int, from: WeightUnit, to: WeightUnit) -> Int {
-        if from == to { return weight }
-        if from == .kilograms && to == .pounds {
-            return Int(Double(weight) * 2.20462)
-        } else {
-            return Int(Double(weight) / 2.20462)
-        }
-    }
-    
+
     // MARK: - Number Formatting
-    
+
+    /// Format a Double without a trailing ".0", keeping up to two decimals.
+    static func formatNumber(_ value: Double) -> String {
+        if value == value.rounded() {
+            return String(format: "%.0f", value)
+        }
+        var formatted = String(format: "%.2f", value)
+        while formatted.hasSuffix("0") { formatted.removeLast() }
+        return formatted
+    }
+
     static func formatDouble(_ value: Double, units: String? = nil) -> String {
         let formattedValue = String(format: "%.3g", value)
         if let units = units?.lowercased() {
